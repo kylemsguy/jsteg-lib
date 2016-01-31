@@ -3,6 +3,10 @@
 #include <jpeglib.h>
 #include <setjmp.h>
 
+/** My attempt at implementing JSteg from scratch
+  * Note: try using this to understand and access the DCT coefficients:
+  * http://stackoverflow.com/questions/16186717/changing-dct-coefficients
+  */
 
 int main(int argc, char **argv) {
 	if(argc != 4) {
@@ -31,7 +35,13 @@ int main(int argc, char **argv) {
 
 	jvirt_barray_ptr *dct = jpeg_read_coefficients(&cinfo);
 
+	JDIMENSION width = cinfo.output_width;
+	JDIMENSION height = cinfo.output_height;
+
+	JDIMENSION rows = height / 8;
+
 	// do stuff
+	JBLOCKARRAY buf = (cinfo.mem->access_virt_barray)((j_common_ptr)&cinfo, *dct, 0, 1, 0);
 
 	jpeg_finish_decompress(&cinfo);
 

@@ -43,6 +43,15 @@ int main(int argc, char **argv) {
 	// do stuff
 	JBLOCKARRAY buf = (cinfo.mem->access_virt_barray)((j_common_ptr)&cinfo, *dct, 0, 1, 0);
 
+	/* NOTE: figure out what each block in array means. We know that block array is 128x128,
+	         with each block having 64 values (one entire DCT coefficient table)
+	         This means that the array contains 128^2 8x8 blocks.
+	         What we need to figure out is which elements of the array correspond to which channel
+	         In most JPEGs, the channels are YCbCr. 
+
+	         We are only interested in modifying the Y (luminance) channel.
+	*/
+
 	jpeg_finish_decompress(&cinfo);
 
 	return 0;

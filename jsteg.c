@@ -3,57 +3,91 @@
 #include <jpeglib.h>
 #include <setjmp.h>
 
+int encode_data(j_decompress_ptr srcinfo, j_compress_ptr dstinfo, 
+    JDIMENSION x_crop_offset, jvirt_barray_ptr *src_coef_arrays){
+
+    /**
+      * So to change a single dct, you can use the following simple code: 
+      * To access any dct coeff, you need to change four index, cx, bx, by, bi. 
+      */
+    return 0;
+}
+
 /** My attempt at implementing JSteg from scratch
   * Note: try using this to understand and access the DCT coefficients:
   * http://stackoverflow.com/questions/16186717/changing-dct-coefficients
   */
 
 int main(int argc, char **argv) {
-	if(argc != 4) {
-		printf("Usage: ./jsteg <input file> <source jpeg> <destination jpeg>\n");
-		printf("Invalid argument count. Expected 3 found %d\n", argc-1);
-		exit(1);
-	}
+    if(argc != 4) {
+        printf("Usage: ./jsteg <input file> <source jpeg> <destination jpeg>\n");
+        printf("Invalid argument count. Expected 3 found %d\n", argc-1);
+        exit(1);
+    }
 
-	char *in_filename = argv[1];
-	char *jpeg_filename = argv[2];
+    char *in_filename = argv[1];
+    char *src_jpg_name = argv[2];
+    char *dst_jpg_name = argv[3];
 
-	struct jpeg_decompress_struct cinfo;
-	struct jpeg_error_mgr jerr;
+    // allocate structures
+    struct jpeg_decompress_struct src_cinfo;
+    struct jpeg_compress_struct dst_cinfo;
+    struct jpeg_error_mgr jsrcerr, jdsterr;
 
-	cinfo.err = jpeg_std_error(&jerr);
-	jpeg_create_decompress(&cinfo);
+    // Initialize the JPEG decompression object with default error handling
+    src_cinfo.err = jpeg_std_error(&jsrcerr);
+    jpeg_create_decompress(&src_cinfo);
 
-	FILE *in_file;
-	if((in_file = fopen(jpeg_filename, "rb")) == NULL) {
-		fprintf(stderr, "Couldn't open file %s for decompression\n", jpeg_filename);
-		exit(1);
-	}
+    // Initialize the JPEG comression object with default error handling
+    dst_cinfo.err = jpeg_std_error(&jdsterr);
+    jpeg_create_compress(&dst_cinfo);
 
-	jpeg_stdio_src(&cinfo, in_file);
-	jpeg_read_header(&cinfo, TRUE);
+    // open the source file
+    FILE *fp;
+    if((fp = fopen(src_jpg_name, "rb")) == NULL) {
+        fprintf(stderr, "Couldn't open file %s for decompression\n", src_jpg_name);
+        exit(1);
+    }
 
-	jvirt_barray_ptr *dct = jpeg_read_coefficients(&cinfo);
+    jpeg_stdio_src(&src_cinfo, fp);
+    jpeg_read_header(&src_cinfo, TRUE);
 
-	JDIMENSION width = cinfo.output_width;
-	JDIMENSION height = cinfo.output_height;
+    jvirt_barray_ptr *dct = jpeg_read_coefficients(&src_cinfo);
 
-	JDIMENSION rows = height / 8;
+    JDIMENSION width = src_cinfo.output_width;
+    JDIMENSION height = src_cinfo.output_height;
 
-	// do stuff
-	JBLOCKARRAY buf = (cinfo.mem->access_virt_barray)((j_common_ptr)&cinfo, *dct, 0, 1, 0);
+    JDIMENSION rows = height / 8;
 
-	/* NOTE: figure out what each block in array means. We know that block array is 128x128,
-	         with each block having 64 values (one entire DCT coefficient table)
-	         This means that the array contains 128^2 8x8 blocks.
-	         What we need to figure out is which elements of the array correspond to which channel
-	         In most JPEGs, the channels are YCbCr. 
+    // do stuff
+    JBLOCKARRAY buf = (src_cinfo.mem->access_virt_barray)((j_common_ptr)&src_cinfo, *dct, 0, 1, 0);
 
-	         We are only interested in modifying the Y (luminance) channel.
-	*/
+    /* NOTE: figure out what each block in array means. We know that block array is 128x128,
+             with each block having 64 values (one entire DCT coefficient table)
+             This means that the array contains 128^2 8x8 blocks.
+             What we need to figure out is which elements of the array correspond to which channel
+             In most JPEGs, the channels are YCbCr. 
 
-	jpeg_finish_decompress(&cinfo);
+             We are only interested in modifying the Y (luminance) channel.
+    */
 
-	return 0;
+    jpeg_finish_decompress(&src_cinfo);
+
+
+    fclose(fp);
+
+    // Open destination file
+    if((fp = fopen(src_jpg_name, "wb")) == NULL) {
+        fprintf(stderr, "Couldn't open target JPEG file %s\n", src_jpg_name);
+        exit(1);
+    }
+
+    // do stuff
+
+
+
+    fclose(fp);
+
+    return 0;
 
 }
